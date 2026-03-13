@@ -32,6 +32,9 @@ import { usePrivy } from "@privy-io/react-auth";
 import { toDbUserId } from "@/lib/privy-utils";
 import { GroupDetailsSkeleton } from "@/components/loading-states/group-loading";
 
+import { useSettlements } from "@/hooks/useSettlements";
+import { useExpenses } from "@/hooks/useExpenses";
+
 export default function GroupDetailsPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const router = useRouter();
@@ -67,28 +70,33 @@ export default function GroupDetailsPage({ params }: { params: { id: string } })
     enabled: !!id && !!privyUser,
   });
 
-  const isLoading = groupLoading || membersLoading;
+  const { settlements, isLoading: settlementsLoading } = useSettlements(id);
+  const { data: expensesData, isLoading: expensesLoading } = useExpenses(id);
+
+  const isLoading = groupLoading || membersLoading || settlementsLoading || expensesLoading;
 
   const currentUserBalance = members?.find((m: any) => m.user?.id === currentUserId)?.balance || 0;
 
   const activities = [
-    {
-      id: "1",
+    ...(expensesData?.items || []).map((exp: any) => ({
+      id: `exp-${exp.id}`,
       type: "expense" as const,
-      content: "Alice added Dinner in SoHo",
-      timestamp: new Date().toISOString(),
-      user: { name: "Alice", avatar_url: null },
-      amount: 132.40,
-      currency: "USDC"
-    },
-    {
-      id: "2",
-      type: "join" as const,
-      content: "Bob joined the group",
-      timestamp: new Date(Date.now() - 3600000).toISOString(),
-      user: { name: "Bob", avatar_url: null }
-    }
-  ];
+      content: `${exp.paidBy.name} added ${exp.description}`,
+      timestamp: exp.created_at,
+      user: exp.paidBy,
+      amount: exp.total_amount,
+      currency: exp.currency
+    })),
+    ...(settlements || []).map((s: any) => ({
+      id: `settle-${s.id}`,
+      type: "settlement" as const,
+      content: `${s.payer.name} settled with ${s.payee.name}`,
+      timestamp: s.created_at,
+      user: s.payer,
+      amount: s.amount,
+      currency: s.currency
+    }))
+  ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   if (isLoading) {
     return <GroupDetailsSkeleton />;
@@ -108,8 +116,9 @@ export default function GroupDetailsPage({ params }: { params: { id: string } })
 
   const tabs = [
     { id: "expenses", label: "Expenses", icon: <Receipt size={16} /> },
-    { id: "balances", label: "Balances", icon: <History size={16} /> },
+    { id: "balances", label: "Balances", icon: <Users size={16} /> },
     { id: "settle", label: "Settle", icon: <Wallet size={16} /> },
+    { id: "activity", label: "Activity", icon: <History size={16} /> },
     { id: "media", label: "Media", icon: <ImageIcon size={16} /> },
   ];
 
@@ -175,9 +184,61 @@ export default function GroupDetailsPage({ params }: { params: { id: string } })
               </div>
             )}
             {activeTab === "settle" && (
-              <Card className="p-12 text-center border-dashed bg-muted/30 rounded-3xl animate-in fade-in slide-in-from-bottom-2 duration-500">
-                <p className="text-sm text-muted-foreground font-medium italic">Settle up your debts here. Feature coming soon!</p>
-              </Card>
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                {settlements && settlements.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between px-1">
+                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Recent Settlements</h3>
+                      <Badge variant="secondary" className="text-[10px] h-5 px-2 rounded-lg bg-emerald-500/10 text-emerald-500 border-none font-bold">
+                        {settlements.length} total
+                      </Badge>
+                    </div>
+                    <div className="grid gap-3">
+                      {settlements.map((s: any) => (
+                        <Card key={s.id} className="p-4 border-border/50 bg-card/50 rounded-2xl flex items-center justify-between group hover:bg-muted/30 transition-all">
+                          <div className="flex items-center gap-4">
+                            <div className="flex -space-x-2">
+                              <Avatar src={s.payer.avatar_url} fallback={s.payer.name.slice(0, 2).toUpperCase()} className="h-8 w-8 border-2 border-background" />
+                              <Avatar src={s.payee.avatar_url} fallback={s.payee.name.slice(0, 2).toUpperCase()} className="h-8 w-8 border-2 border-background" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold tracking-tight">
+                                {s.payer.id === currentUserId ? "You" : s.payer.name} paid {s.payee.id === currentUserId ? "you" : s.payee.name}
+                              </p>
+                              <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">
+                                {new Date(s.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-black text-emerald-500">
+                              +{formatCurrency(s.amount)}
+                            </p>
+                            <Badge variant="outline" className="text-[8px] h-4 px-1 rounded-md opacity-40 uppercase font-black">
+                              Completed
+                            </Badge>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <Card className="p-12 text-center border-dashed bg-muted/30 rounded-3xl">
+                    <div className="h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
+                      <Wallet className="h-8 w-8 text-emerald-500" />
+                    </div>
+                    <p className="text-sm text-muted-foreground font-medium italic">No settlements recorded yet.</p>
+                    <Button variant="link" className="text-xs font-black uppercase tracking-tighter mt-2" asChild>
+                      <Link href={`/groups/${id}?tab=balances`}>Settle a debt</Link>
+                    </Button>
+                  </Card>
+                )}
+              </div>
+            )}
+            {activeTab === "activity" && (
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <ActivityFeed activities={activities} />
+              </div>
             )}
             {activeTab === "media" && (
               <Card className="p-12 text-center border-dashed bg-muted/30 rounded-3xl animate-in fade-in slide-in-from-bottom-2 duration-500">

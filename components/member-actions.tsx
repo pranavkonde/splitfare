@@ -127,7 +127,11 @@ export function MemberActions({
         method: "POST",
       });
 
-      if (!response.ok) throw new Error("Failed to leave group");
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to leave group");
+      }
 
       notify({
         title: "Success",
@@ -136,10 +140,10 @@ export function MemberActions({
       });
       setIsLeaveModalOpen(false);
       router.push("/dashboard");
-    } catch (err) {
+    } catch (err: any) {
       notify({
         title: "Error",
-        description: "Failed to leave group",
+        description: err.message || "Failed to leave group",
         variant: "error",
       });
     } finally {
