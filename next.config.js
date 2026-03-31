@@ -20,26 +20,11 @@ const withPWA = require('@ducanh2912/next-pwa').default({
     },
     {
       urlPattern: /^\/api\/users\/me.*/i,
-      handler: 'StaleWhileRevalidate',
-      options: {
-        cacheName: 'user-data',
-        expiration: {
-          maxEntries: 10,
-          maxAgeSeconds: 24 * 60 * 60, 
-        },
-      },
+      handler: 'NetworkOnly',
     },
     {
       urlPattern: /^\/api\/.*/i,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'api-cache',
-        expiration: {
-          maxEntries: 100,
-          maxAgeSeconds: 24 * 60 * 60, 
-        },
-        networkTimeoutSeconds: 10,
-      },
+      handler: 'NetworkOnly',
     },
     {
       urlPattern: /\.(?:js|css|woff2?|png|svg|jpg|jpeg|gif|webp)$/i,

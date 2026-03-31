@@ -1,4 +1,5 @@
-import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { withMiddleware, createResponse, createErrorResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { NotFoundError, RateLimitError } from '@/lib/errors';
 import { notificationService } from '@/services/notification';
 import { toDbUserId } from '@/lib/privy-utils';
 import { supabaseAdmin } from '@/supabase/admin';
@@ -17,7 +18,7 @@ const nudgeUser = async (req: AuthenticatedRequest, { params }: { params: { id: 
       .single();
 
     if (groupError || !group) {
-      return createResponse({ error: 'Group not found' }, 404);
+      return createErrorResponse(new NotFoundError('Group not found'));
     }
 
     // Get sender info
@@ -28,7 +29,7 @@ const nudgeUser = async (req: AuthenticatedRequest, { params }: { params: { id: 
       .single();
 
     if (senderError || !sender) {
-      return createResponse({ error: 'Sender not found' }, 404);
+      return createErrorResponse(new NotFoundError('Sender not found'));
     }
 
     // Check rate limit (1 per 24 hours)
@@ -36,7 +37,7 @@ const nudgeUser = async (req: AuthenticatedRequest, { params }: { params: { id: 
     if (latestNudge) {
       const hoursSinceLastNudge = (Date.now() - latestNudge.getTime()) / (1000 * 60 * 60);
       if (hoursSinceLastNudge < 24) {
-        return createResponse({ error: 'You can only send one nudge every 24 hours.' }, 429);
+        return createErrorResponse(new RateLimitError('You can only send one nudge every 24 hours.'));
       }
     }
 
@@ -57,7 +58,7 @@ const nudgeUser = async (req: AuthenticatedRequest, { params }: { params: { id: 
     return createResponse({ success: true });
   } catch (error) {
     console.error('Error in POST /api/groups/[id]/remind/[userId]:', error);
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 

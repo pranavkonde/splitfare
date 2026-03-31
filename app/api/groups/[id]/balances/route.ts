@@ -1,4 +1,5 @@
-import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { withMiddleware, createResponse, createErrorResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { AppError, ForbiddenError, NotFoundError } from '@/lib/errors';
 import { supabaseAdmin } from '@/supabase/admin';
 import { toDbUserId } from '@/lib/privy-utils';
 
@@ -58,12 +59,12 @@ const getBalances = async (req: AuthenticatedRequest, { params }: { params: { id
       .eq('group_id', groupId);
 
     if (membersError || !members) {
-      return createResponse({ error: 'Group not found or access denied' }, 404);
+      return createErrorResponse(new NotFoundError('Group not found or access denied'));
     }
 
     const isMember = members.some(m => (m.users as any).id === userId);
     if (!isMember) {
-      return createResponse({ error: 'Access denied' }, 403);
+      return createErrorResponse(new ForbiddenError('Access denied'));
     }
 
     // 2. Fetch all expenses and splits for the group
@@ -93,7 +94,7 @@ const getBalances = async (req: AuthenticatedRequest, { params }: { params: { id
     }
 
     if (expensesError) {
-      return createResponse({ error: 'Failed to fetch expenses' }, 400);
+      return createErrorResponse(new AppError('Failed to fetch expenses', 400));
     }
 
     // 3. Calculate net balances
@@ -137,7 +138,7 @@ const getBalances = async (req: AuthenticatedRequest, { params }: { params: { id
     });
   } catch (error) {
     console.error('Error in GET /api/groups/[id]/balances:', error);
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 

@@ -1,4 +1,4 @@
-import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { withMiddleware, createResponse, createErrorResponse, AuthenticatedRequest } from '@/lib/api-utils';
 import { notificationService } from '@/services/notification';
 import { toDbUserId } from '@/lib/privy-utils';
 
@@ -9,7 +9,7 @@ const getNotifications = async (req: AuthenticatedRequest) => {
     return createResponse(notifications);
   } catch (error) {
     console.error('Error in GET /api/notifications:', error);
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 

@@ -1,5 +1,13 @@
 const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/heic", "application/pdf"];
+const ALLOWED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/heic",
+  "image/heif",
+  "application/pdf",
+];
+
+export type GetAccessToken = () => Promise<string | null | undefined>;
 
 export interface UploadProgress {
   status: "idle" | "compressing" | "uploading" | "success" | "error";
@@ -57,11 +65,17 @@ async function compressImage(file: File): Promise<Blob> {
 
 export async function uploadReceipt(
   file: File,
-  onProgress: (p: UploadProgress) => void
+  onProgress: (p: UploadProgress) => void,
+  getAccessToken: GetAccessToken
 ): Promise<string> {
   try {
     if (!ALLOWED_TYPES.includes(file.type)) {
       throw new Error("Unsupported file type. Please use JPEG, PNG, HEIC, or PDF.");
+    }
+
+    const token = await getAccessToken();
+    if (!token) {
+      throw new Error("Not authenticated");
     }
 
     onProgress({ status: "compressing", progress: 10 });
@@ -76,11 +90,20 @@ export async function uploadReceipt(
 
     const uploadRes = await fetch("/api/upload", {
       method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
       body: formData,
     });
     const uploadPayload = await uploadRes.json();
     if (!uploadRes.ok || !uploadPayload?.success || !uploadPayload?.data?.cid) {
-      throw new Error(uploadPayload?.error?.message || uploadPayload?.data?.error || "Upload failed");
+      const errMsg =
+        uploadPayload?.error?.message ||
+        (uploadPayload?.data && typeof uploadPayload.data === "object" && "error" in uploadPayload.data
+          ? String((uploadPayload.data as { error?: string }).error)
+          : "") ||
+        "Upload failed";
+      throw new Error(errMsg || "Upload failed");
     }
     const cid = uploadPayload.data.cid as string;
     

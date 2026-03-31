@@ -1,4 +1,4 @@
-import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { withMiddleware, createResponse, createErrorResponse, AuthenticatedRequest } from '@/lib/api-utils';
 import { notificationService } from '@/services/notification';
 import { toDbUserId } from '@/lib/privy-utils';
 
@@ -10,7 +10,7 @@ const markAsRead = async (req: AuthenticatedRequest, { params }: { params: { id:
     return createResponse({ success: true });
   } catch (error) {
     console.error('Error in PATCH /api/notifications/[id]/read:', error);
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 

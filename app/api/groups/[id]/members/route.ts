@@ -1,4 +1,5 @@
-import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { withMiddleware, createResponse, createErrorResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { ForbiddenError, AppError } from '@/lib/errors';
 import { supabaseAdmin } from '@/supabase/admin';
 import { toDbUserId } from '@/lib/privy-utils';
 import { calculateBalances } from '@/lib/calculations';
@@ -16,7 +17,7 @@ const getGroupMembers = async (req: AuthenticatedRequest, { params }: { params: 
       .single();
 
     if (memberCheckError || !membership) {
-      return createResponse({ error: 'Unauthorized' }, 403);
+      return createErrorResponse(new ForbiddenError('Unauthorized'));
     }
 
     const { data: members, error: membersError } = await supabaseAdmin
@@ -38,7 +39,7 @@ const getGroupMembers = async (req: AuthenticatedRequest, { params }: { params: 
 
     if (membersError) {
       console.error('Error fetching group members:', membersError);
-      return createResponse({ error: 'Failed to fetch members' }, 500);
+      return createErrorResponse(new AppError('Failed to fetch members', 500));
     }
 
     let { data: expenses, error: expensesError } = await supabaseAdmin
@@ -68,7 +69,7 @@ const getGroupMembers = async (req: AuthenticatedRequest, { params }: { params: 
 
     if (expensesError) {
       console.error('Error fetching expenses for balance:', expensesError);
-      return createResponse({ error: 'Failed to fetch balances' }, 500);
+      return createErrorResponse(new AppError('Failed to fetch balances', 500));
     }
 
     const { data: settlements, error: settlementsError } = await supabaseAdmin
@@ -79,7 +80,7 @@ const getGroupMembers = async (req: AuthenticatedRequest, { params }: { params: 
 
     if (settlementsError) {
       console.error('Error fetching settlements for balance:', settlementsError);
-      return createResponse({ error: 'Failed to fetch balances' }, 500);
+      return createErrorResponse(new AppError('Failed to fetch balances', 500));
     }
 
     const balances = calculateBalances(
@@ -99,7 +100,7 @@ const getGroupMembers = async (req: AuthenticatedRequest, { params }: { params: 
     return createResponse(membersWithBalances);
   } catch (error) {
     console.error('Error in GET /api/groups/[id]/members:', error);
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 

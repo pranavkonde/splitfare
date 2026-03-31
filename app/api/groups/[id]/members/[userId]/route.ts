@@ -1,4 +1,5 @@
-import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { withMiddleware, createResponse, createErrorResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { AppError, ForbiddenError, NotFoundError } from '@/lib/errors';
 import { supabaseAdmin } from '@/supabase/admin';
 import { toDbUserId } from '@/lib/privy-utils';
 import { createServerStorachaService } from '@/lib/storacha-server';
@@ -20,12 +21,12 @@ const updateMember = async (req: AuthenticatedRequest & { validatedBody?: any },
       .single();
 
     if (currentMemberError || !currentMembership || (currentMembership.role !== 'admin' && currentMembership.role !== 'owner')) {
-      return createResponse({ error: 'Unauthorized: Admin or owner role required' }, 403);
+      return createErrorResponse(new ForbiddenError('Unauthorized: Admin or owner role required'));
     }
 
     if (role === 'owner') {
       if (currentMembership.role !== 'owner') {
-        return createResponse({ error: 'Only the current owner can transfer ownership' }, 403);
+        return createErrorResponse(new ForbiddenError('Only the current owner can transfer ownership'));
       }
 
       const { error: targetUpdateError } = await supabaseAdmin
@@ -35,7 +36,7 @@ const updateMember = async (req: AuthenticatedRequest & { validatedBody?: any },
         .eq('user_id', targetUserId);
 
       if (targetUpdateError) {
-        return createResponse({ error: 'Failed to update target user role' }, 400);
+        return createErrorResponse(new AppError('Failed to update target user role', 400));
       }
 
       const { error: currentUpdateError } = await supabaseAdmin
@@ -45,7 +46,7 @@ const updateMember = async (req: AuthenticatedRequest & { validatedBody?: any },
         .eq('user_id', currentUserId);
 
       if (currentUpdateError) {
-        return createResponse({ error: 'Failed to demote current owner' }, 400);
+        return createErrorResponse(new AppError('Failed to demote current owner', 400));
       }
 
       return createResponse({ success: true, message: 'Ownership transferred' });
@@ -57,14 +58,14 @@ const updateMember = async (req: AuthenticatedRequest & { validatedBody?: any },
         .eq('user_id', targetUserId);
 
       if (updateError) {
-        return createResponse({ error: 'Failed to update member role' }, 400);
+        return createErrorResponse(new AppError('Failed to update member role', 400));
       }
 
       return createResponse({ success: true, message: `Member role updated to ${role}` });
     }
   } catch (error) {
     console.error('Error in PATCH /api/groups/[id]/members/[userId]:', error);
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 
@@ -82,7 +83,7 @@ const removeMember = async (req: AuthenticatedRequest, { params }: { params: { i
       .single();
 
     if (currentMemberError || !currentMembership || (currentMembership.role !== 'admin' && currentMembership.role !== 'owner')) {
-      return createResponse({ error: 'Unauthorized: Admin or owner role required' }, 403);
+      return createErrorResponse(new ForbiddenError('Unauthorized: Admin or owner role required'));
     }
 
     const { data: targetMembership, error: targetMemberError } = await supabaseAdmin
@@ -93,15 +94,15 @@ const removeMember = async (req: AuthenticatedRequest, { params }: { params: { i
       .single();
 
     if (targetMemberError || !targetMembership) {
-      return createResponse({ error: 'Target user not found in group' }, 404);
+      return createErrorResponse(new NotFoundError('Target user not found in group'));
     }
 
     if (targetMembership.role === 'owner') {
-      return createResponse({ error: 'The owner cannot be removed from the group' }, 403);
+      return createErrorResponse(new ForbiddenError('The owner cannot be removed from the group'));
     }
 
     if (targetMembership.role === 'admin' && currentMembership.role !== 'owner') {
-      return createResponse({ error: 'Only the owner can remove other admins' }, 403);
+      return createErrorResponse(new ForbiddenError('Only the owner can remove other admins'));
     }
 
     const { error: deleteError } = await supabaseAdmin
@@ -111,7 +112,7 @@ const removeMember = async (req: AuthenticatedRequest, { params }: { params: { i
       .eq('user_id', targetUserId);
 
     if (deleteError) {
-        return createResponse({ error: 'Failed to remove member' }, 400);
+        return createErrorResponse(new AppError('Failed to remove member', 400));
       }
 
       try {
@@ -128,7 +129,7 @@ const removeMember = async (req: AuthenticatedRequest, { params }: { params: { i
     return createResponse({ success: true, message: 'Member removed' });
   } catch (error) {
     console.error('Error in DELETE /api/groups/[id]/members/[userId]:', error);
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 

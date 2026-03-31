@@ -151,7 +151,7 @@ const createExpense = async (req: AuthenticatedRequest & { validatedBody: any },
       .single();
 
     if (memberError || !membership) {
-      return createResponse({ error: 'Access denied' }, 403);
+      return createErrorResponse(new ForbiddenError('Access denied'));
     }
 
     // Normalize IDs: clients may send either users.id or group_members.id.
@@ -167,7 +167,7 @@ const createExpense = async (req: AuthenticatedRequest & { validatedBody: any },
 
     if (memberMappingsError) {
       console.error('Error resolving member mappings:', memberMappingsError);
-      return createResponse({ error: 'Failed to validate expense members' }, 400);
+      return createErrorResponse(new AppError('Failed to validate expense members', 400));
     }
 
     const idToUserId = new Map<string, string>();
@@ -183,7 +183,9 @@ const createExpense = async (req: AuthenticatedRequest & { validatedBody: any },
     }));
 
     if (!normalizedPaidById || normalizedSplits.some((s: any) => !s.userId)) {
-      return createResponse({ error: 'One or more selected members are invalid for this group' }, 400);
+      return createErrorResponse(
+        new AppError('One or more selected members are invalid for this group', 400)
+      );
     }
 
     const { data: expense, error: expenseError } = await supabaseAdmin
@@ -202,7 +204,7 @@ const createExpense = async (req: AuthenticatedRequest & { validatedBody: any },
 
     if (expenseError) {
       console.error('Error creating expense:', expenseError);
-      return createResponse({ error: 'Failed to create expense' }, 400);
+      return createErrorResponse(new AppError('Failed to create expense', 400));
     }
 
     let computedAmountByUserId = new Map<string, number>();
@@ -216,7 +218,9 @@ const createExpense = async (req: AuthenticatedRequest & { validatedBody: any },
           amount: Number(s.amount || 0),
         }));
         if (!validateExactSplit(body.amount, exactSplits)) {
-          return createResponse({ error: 'Exact split amounts must sum to the total amount' }, 400);
+          return createErrorResponse(
+            new AppError('Exact split amounts must sum to the total amount', 400)
+          );
         }
         computedAmountByUserId = new Map(exactSplits.map((s) => [s.userId, s.amount]));
       } else if (body.splitType === 'PERCENTAGE') {
@@ -231,14 +235,16 @@ const createExpense = async (req: AuthenticatedRequest & { validatedBody: any },
           normalizedSplits.map((s: any) => ({ userId: s.userId, shares: Number(s.shares || 0) }))
         );
         if (computed.length === 0) {
-          return createResponse({ error: 'Shares split requires at least one positive share' }, 400);
+          return createErrorResponse(
+            new AppError('Shares split requires at least one positive share', 400)
+          );
         }
         computedAmountByUserId = new Map(computed.map((s) => [s.userId, s.amount]));
       } else {
-        return createResponse({ error: 'Invalid split type' }, 400);
+        return createErrorResponse(new AppError('Invalid split type', 400));
       }
     } catch (splitError: any) {
-      return createResponse({ error: splitError?.message || 'Invalid split configuration' }, 400);
+      return createErrorResponse(new AppError('Invalid split configuration', 400));
     }
 
     const splitsToInsert = normalizedSplits.map((split: any) => ({
@@ -256,7 +262,7 @@ const createExpense = async (req: AuthenticatedRequest & { validatedBody: any },
     if (splitsError) {
       console.error('Error creating splits:', splitsError);
       await supabaseAdmin.from('expenses').delete().eq('id', expense.id);
-      return createResponse({ error: 'Failed to create expense splits' }, 400);
+      return createErrorResponse(new AppError('Failed to create expense splits', 400));
     }
 
     if (body.receiptCid) {
@@ -304,7 +310,7 @@ const createExpense = async (req: AuthenticatedRequest & { validatedBody: any },
     return createResponse(expense, 201);
   } catch (error) {
     console.error('Error in POST /api/groups/[id]/expenses:', error);
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 

@@ -1,6 +1,10 @@
-import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { withMiddleware, createResponse, createErrorResponse, AuthenticatedRequest } from '@/lib/api-utils';
 import { supabaseAdmin } from '@/supabase/admin';
 import { toDbUserId } from '@/lib/privy-utils';
+import { CreateGroupSchema } from '@/lib/validations';
+import { NotFoundError, ForbiddenError, AppError } from '@/lib/errors';
+
+const UpdateGroupSchema = CreateGroupSchema.partial();
 
 const getGroup = async (req: AuthenticatedRequest, { params }: { params: { id: string } }) => {
   try {
@@ -19,13 +23,13 @@ const getGroup = async (req: AuthenticatedRequest, { params }: { params: { id: s
 
     if (error || !group) {
       console.error('Error fetching group:', error);
-      return createResponse({ error: 'Group not found or access denied' }, 404);
+      return createErrorResponse(new NotFoundError('Group not found or access denied'));
     }
 
     return createResponse(group);
   } catch (error) {
     console.error('Error in GET /api/groups/[id]:', error);
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 
@@ -43,7 +47,7 @@ const updateGroup = async (req: AuthenticatedRequest & { validatedBody: any }, {
       .single();
 
     if (memberError || !membership || membership.role !== 'admin') {
-      return createResponse({ error: 'Unauthorized' }, 403);
+      return createErrorResponse(new ForbiddenError('Unauthorized'));
     }
 
     const { data: group, error: updateError } = await supabaseAdmin
@@ -54,14 +58,14 @@ const updateGroup = async (req: AuthenticatedRequest & { validatedBody: any }, {
       .single();
 
     if (updateError) {
-      return createResponse({ error: 'Failed to update group' }, 400);
+      return createErrorResponse(new AppError('Failed to update group', 400));
     }
 
     return createResponse(group);
   } catch (error) {
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 
 export const GET = withMiddleware(getGroup, { auth: true });
-export const PATCH = withMiddleware(updateGroup, { auth: true });
+export const PATCH = withMiddleware(updateGroup, { auth: true, validation: { schema: UpdateGroupSchema } });

@@ -1,4 +1,5 @@
-import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { withMiddleware, createResponse, createErrorResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { AppError, ForbiddenError } from '@/lib/errors';
 import { supabaseAdmin } from '@/supabase/admin';
 import { toDbUserId } from '@/lib/privy-utils';
 import { nanoid } from 'nanoid';
@@ -16,7 +17,7 @@ const regenerateInviteCode = async (req: AuthenticatedRequest, { params }: { par
       .single();
 
     if (membershipError || !membership || membership.role !== 'admin') {
-      return createResponse({ error: 'Only admins can regenerate invite codes' }, 403);
+      return createErrorResponse(new ForbiddenError('Only admins can regenerate invite codes'));
     }
 
     const newCode = nanoid(8);
@@ -30,13 +31,13 @@ const regenerateInviteCode = async (req: AuthenticatedRequest, { params }: { par
 
     if (updateError) {
       console.error('Error updating invite code:', updateError);
-      return createResponse({ error: 'Failed to regenerate invite code' }, 500);
+      return createErrorResponse(new AppError('Failed to regenerate invite code', 500));
     }
 
     return createResponse(group);
   } catch (error) {
     console.error('Error in POST /api/groups/[id]/regenerate-invite:', error);
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 

@@ -1,8 +1,8 @@
-import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { withMiddleware, createResponse, createErrorResponse, AuthenticatedRequest } from '@/lib/api-utils';
 import { supabaseAdmin } from '@/supabase/admin';
 import { toDbUserId } from '@/lib/privy-utils';
 import { CreateMediaSchema, MediaFilterSchema } from '@/lib/validations/media';
-import { z } from 'zod';
+import { ForbiddenError, AppError } from '@/lib/errors';
 
 const listMedia = async (req: AuthenticatedRequest, { params }: { params: { id: string } }) => {
   try {
@@ -18,7 +18,7 @@ const listMedia = async (req: AuthenticatedRequest, { params }: { params: { id: 
       .single();
 
     if (memberError || !membership) {
-      return createResponse({ error: 'Access denied' }, 403);
+      return createErrorResponse(new ForbiddenError('Access denied'));
     }
 
     const filterParams = {
@@ -46,7 +46,8 @@ const listMedia = async (req: AuthenticatedRequest, { params }: { params: { id: 
     const { data: media, error } = await query;
 
     if (error) {
-      return createResponse({ error: error.message }, 500);
+      console.error('List media query error:', error);
+      return createErrorResponse(new AppError('Failed to fetch media', 500));
     }
 
     const nextCursor = media.length === validatedFilters.limit 
@@ -55,10 +56,7 @@ const listMedia = async (req: AuthenticatedRequest, { params }: { params: { id: 
 
     return createResponse({ data: media, nextCursor });
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      return createResponse({ error: err.errors[0].message }, 400);
-    }
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(err);
   }
 };
 
@@ -78,7 +76,7 @@ const createMedia = async (req: AuthenticatedRequest, { params }: { params: { id
       .single();
 
     if (memberError || !membership) {
-      return createResponse({ error: 'Access denied' }, 403);
+      return createErrorResponse(new ForbiddenError('Access denied'));
     }
 
     const { data: media, error: insertError } = await supabaseAdmin
@@ -95,15 +93,13 @@ const createMedia = async (req: AuthenticatedRequest, { params }: { params: { id
       .single();
 
     if (insertError) {
-      return createResponse({ error: insertError.message }, 500);
+      console.error('Insert media error:', insertError);
+      return createErrorResponse(new AppError('Failed to save media', 500));
     }
 
     return createResponse({ data: media }, 201);
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      return createResponse({ error: err.errors[0].message }, 400);
-    }
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(err);
   }
 };
 

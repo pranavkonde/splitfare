@@ -80,7 +80,13 @@ export const createErrorResponse = (error: unknown): NextResponse<ApiResponse> =
     return NextResponse.json(validationError.toJSON(), { status: 400 });
   }
 
-  const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+  console.error('[API] Unhandled error:', error);
+  const message =
+    process.env.NODE_ENV === 'production'
+      ? 'An unexpected error occurred'
+      : error instanceof Error
+        ? error.message
+        : 'An unexpected error occurred';
   const internalError = new AppError(message);
   return NextResponse.json(internalError.toJSON(), { status: 500 });
 };
@@ -174,6 +180,7 @@ export const withValidation = <T>(schema: ZodSchema<T>, handler: ApiHandler<Requ
 };
 
 import { checkRateLimit } from './rate-limit';
+import { getRateLimitIdentifier } from './client-ip';
 
 
 export const withMiddleware = <T = Request>(handler: ApiHandler<T>, options?: { auth?: boolean; validation?: { schema: ZodSchema }; rateLimit?: boolean }) => {
@@ -183,19 +190,19 @@ export const withMiddleware = <T = Request>(handler: ApiHandler<T>, options?: { 
 
     try {
       if (options?.rateLimit !== false) {
-        const identifier = req.headers.get('x-forwarded-for') || '127.0.0.1';
-        await checkRateLimit(identifier);
+        await checkRateLimit(getRateLimitIdentifier(req));
       }
 
       let finalHandler: ApiHandler<any> = handler;
 
-      // Auth must wrap BEFORE validation so it runs first (outermost = first to execute)
-      if (options?.auth) {
-        finalHandler = withAuth(finalHandler);
-      }
-
+      // Inner handler first; outer wrappers run first at request time. Compose so that
+      // auth runs before body validation (smaller attack surface for unauthenticated requests).
       if (options?.validation) {
         finalHandler = withValidation(options.validation.schema, finalHandler);
+      }
+
+      if (options?.auth) {
+        finalHandler = withAuth(finalHandler as ApiHandler<AuthenticatedRequest>);
       }
 
       response = await (finalHandler as ApiHandler<Request>)(req, context);

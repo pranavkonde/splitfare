@@ -1,4 +1,5 @@
-import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { withMiddleware, createResponse, createErrorResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { AppError } from '@/lib/errors';
 import { CreateGroupSchema } from '@/lib/validations';
 import { supabaseAdmin } from '@/supabase/admin';
 import { toDbUserId } from '@/lib/privy-utils';
@@ -22,7 +23,7 @@ const getGroups = async (req: AuthenticatedRequest) => {
 
   if (error) {
     console.error('Error fetching groups:', error);
-    return createResponse([], 500);
+    return createErrorResponse(new AppError('Failed to fetch groups', 500));
   }
 
   return createResponse(groups);
@@ -49,7 +50,7 @@ const createGroup = async (req: AuthenticatedRequest & { validatedBody: any }) =
 
     if (groupError) {
       console.error('Error creating group:', groupError);
-      return createResponse({ error: 'Failed to create group' }, 400);
+      return createErrorResponse(new AppError('Failed to create group', 400));
     }
 
     const { error: memberError } = await supabaseAdmin
@@ -63,7 +64,7 @@ const createGroup = async (req: AuthenticatedRequest & { validatedBody: any }) =
     if (memberError) {
       console.error('Error adding creator to group:', memberError);
       await supabaseAdmin.from('groups').delete().eq('id', group.id);
-      return createResponse({ error: 'Failed to add you as a member of this group' }, 500);
+      return createErrorResponse(new AppError('Failed to add you as a member of this group', 500));
     }
 
     const { data: creator } = await supabaseAdmin
@@ -128,7 +129,7 @@ const createGroup = async (req: AuthenticatedRequest & { validatedBody: any }) =
     return createResponse(group, 201);
   } catch (error) {
     console.error('Error in POST /api/groups:', error);
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 

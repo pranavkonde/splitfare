@@ -1,4 +1,5 @@
-import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { withMiddleware, createResponse, createErrorResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { AppError, ForbiddenError } from '@/lib/errors';
 import { CreateSettlementSchema } from '@/lib/validations';
 import { supabaseAdmin } from '@/supabase/admin';
 import { notificationService } from '@/services/notification';
@@ -28,13 +29,13 @@ const getSettlements = async (req: AuthenticatedRequest) => {
 
     if (error) {
       console.error('Error fetching settlements:', error);
-      return createResponse({ error: 'Failed to fetch settlements' }, 400);
+      return createErrorResponse(new AppError('Failed to fetch settlements', 400));
     }
 
     return createResponse(settlements);
   } catch (error) {
     console.error('Error in GET /api/settlements:', error);
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 
@@ -45,7 +46,9 @@ const createSettlement = async (req: AuthenticatedRequest & { validatedBody: any
 
     // Verify the authenticated user is the payer
     if (body.payerId !== userId) {
-      return createResponse({ error: 'You can only create settlements where you are the payer' }, 403);
+      return createErrorResponse(
+        new ForbiddenError('You can only create settlements where you are the payer')
+      );
     }
 
     // Verify the user is a member of the group
@@ -57,7 +60,7 @@ const createSettlement = async (req: AuthenticatedRequest & { validatedBody: any
       .single();
 
     if (memberError || !membership) {
-      return createResponse({ error: 'Access denied: not a member of this group' }, 403);
+      return createErrorResponse(new ForbiddenError('Access denied: not a member of this group'));
     }
     const { data: settlement, error } = await supabaseAdmin
       .from('settlements')
@@ -81,7 +84,7 @@ const createSettlement = async (req: AuthenticatedRequest & { validatedBody: any
 
     if (error) {
       console.error('Error creating settlement:', error);
-      return createResponse({ error: 'Failed to create settlement' }, 400);
+      return createErrorResponse(new AppError('Failed to create settlement', 400));
     }
 
     // Trigger notification for the payee
@@ -109,7 +112,7 @@ const createSettlement = async (req: AuthenticatedRequest & { validatedBody: any
     return createResponse(settlement, 201);
   } catch (error) {
     console.error('Error in POST /api/settlements:', error);
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 

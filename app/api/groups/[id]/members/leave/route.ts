@@ -1,4 +1,5 @@
-import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { withMiddleware, createResponse, createErrorResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { AppError, ForbiddenError, NotFoundError } from '@/lib/errors';
 import { supabaseAdmin } from '@/supabase/admin';
 import { toDbUserId } from '@/lib/privy-utils';
 
@@ -16,12 +17,14 @@ const leaveGroup = async (req: AuthenticatedRequest, { params }: { params: { id:
       .single();
 
     if (memberError || !membership) {
-      return createResponse({ error: 'User is not a member of the group' }, 404);
+      return createErrorResponse(new NotFoundError('User is not a member of the group'));
     }
 
     const group = (membership as any).groups;
     if (group?.created_by === userId) {
-      return createResponse({ error: 'Group owners must transfer ownership before leaving' }, 403);
+      return createErrorResponse(
+        new ForbiddenError('Group owners must transfer ownership before leaving')
+      );
     }
 
 
@@ -88,10 +91,11 @@ const leaveGroup = async (req: AuthenticatedRequest, { params }: { params: { id:
     const netBalance = totalPaid - totalOwed + totalSettlementsPaid - totalSettlementsReceived;
 
     if (Math.abs(netBalance) > 0.01) {
-      return createResponse({ 
-        error: 'You cannot leave the group until your balance is zero', 
-        balance: Math.round(netBalance * 100) / 100 
-      }, 400);
+      return createErrorResponse(
+        new AppError('You cannot leave the group until your balance is zero', 400, 'NONZERO_BALANCE', {
+          balance: Math.round(netBalance * 100) / 100,
+        })
+      );
     }
 
     const { error: deleteError } = await supabaseAdmin
@@ -101,7 +105,7 @@ const leaveGroup = async (req: AuthenticatedRequest, { params }: { params: { id:
       .eq('user_id', userId);
 
     if (deleteError) {
-      return createResponse({ error: 'Failed to leave group' }, 400);
+      return createErrorResponse(new AppError('Failed to leave group', 400));
     }
 
     try {
@@ -117,7 +121,7 @@ const leaveGroup = async (req: AuthenticatedRequest, { params }: { params: { id:
     return createResponse({ success: true, message: 'Left group successfully' });
   } catch (error) {
     console.error('Error in POST /api/groups/[id]/members/leave:', error);
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 

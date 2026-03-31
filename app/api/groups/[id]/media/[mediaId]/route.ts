@@ -1,6 +1,7 @@
-import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { withMiddleware, createResponse, createErrorResponse, AuthenticatedRequest } from '@/lib/api-utils';
 import { supabaseAdmin } from '@/supabase/admin';
 import { toDbUserId } from '@/lib/privy-utils';
+import { NotFoundError, ForbiddenError, AppError } from '@/lib/errors';
 
 const deleteMedia = async (req: AuthenticatedRequest, { params }: { params: { id: string, mediaId: string } }) => {
   try {
@@ -16,7 +17,7 @@ const deleteMedia = async (req: AuthenticatedRequest, { params }: { params: { id
       .single();
 
     if (mediaError || !media) {
-      return createResponse({ error: 'Media not found' }, 404);
+      return createErrorResponse(new NotFoundError('Media not found'));
     }
 
     const { data: membership, error: memberError } = await supabaseAdmin
@@ -27,14 +28,14 @@ const deleteMedia = async (req: AuthenticatedRequest, { params }: { params: { id
       .single();
 
     if (memberError || !membership) {
-      return createResponse({ error: 'Access denied' }, 403);
+      return createErrorResponse(new ForbiddenError('Access denied'));
     }
 
     const isAdmin = membership.role === 'admin';
     const isUploader = media.uploader_id === userId;
 
     if (!isAdmin && !isUploader) {
-      return createResponse({ error: 'Only the uploader or an admin can delete media' }, 403);
+      return createErrorResponse(new ForbiddenError('Only the uploader or an admin can delete media'));
     }
 
     const { error: deleteError } = await supabaseAdmin
@@ -43,12 +44,13 @@ const deleteMedia = async (req: AuthenticatedRequest, { params }: { params: { id
       .eq('id', mediaId);
 
     if (deleteError) {
-      return createResponse({ error: deleteError.message }, 500);
+      console.error('Delete media error:', deleteError);
+      return createErrorResponse(new AppError('Failed to delete media', 500));
     }
 
     return createResponse({ message: 'Media deleted successfully' });
   } catch (err) {
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(err);
   }
 };
 

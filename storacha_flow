@@ -1,0 +1,263 @@
+
+
+# Storacha Space Architecture in SplitFare
+
+## The Two Space Types
+
+```
+┌─────────────────────────────────────────────────────┐
+│                  STORACHA SPACES                     │
+│                                                     │
+│  ┌───────────────────────────────────┐              │
+│  │   PLATFORM SPACE (1 total)        │              │
+│  │   Owner: Server-side agent        │              │
+│  │                                   │              │
+│  │   Contains:                       │              │
+│  │   • User avatars                  │              │
+│  │   • Platform-level assets         │              │
+│  └───────────────────────────────────┘              │
+│                                                     │
+│  ┌───────────────────────────────────┐              │
+│  │   GROUP SPACE (1 per group)       │              │
+│  │   Name: splitfare-group-{groupId} │              │
+│  │   DID stored in: Group.spaceDid   │              │
+│  │                                   │              │
+│  │   Contains:                       │              │
+│  │   • Group avatar                  │              │
+│  │   • Expense receipts              │              │
+│  │   • Settlement manifests          │              │
+│  │   • Shared media (photos/docs)    │              │
+│  │   • CAR bundles (group archives)  │              │
+│  └───────────────────────────────────┘              │
+│        × N groups                                   │
+└─────────────────────────────────────────────────────┘
+```
+
+---
+
+## Space 1: Platform Space (Single, Server-Owned)
+
+Created once during initial deployment in **PR #5**.
+
+Owned by the **server-side Storacha agent**.
+
+| Content | Uploaded From | PR |
+|---|---|---|
+| User avatars | Server (after client crop) | #10 |
+
+This space exists because user avatars are **not group-specific** — a user exists before joining any group. The server agent manages this space directly, no delegation needed.
+
+---
+
+## Space 2: Per-Group Spaces (One Per Group)
+
+Created at **group creation time** in **PR #11**.
+
+```
+Group created
+    ↓
+Storacha space created: "splitfare-group-{groupId}"
+    ↓
+Space DID stored in Group.spaceDid column
+    ↓
+Creator gets full UCAN delegation
+```
+
+### What lives inside each group space:
+
+| Content | Who Uploads | Agent | PR |
+|---|---|---|---|
+| Group avatar | Creator/Admin | Client-side | #11 |
+| Expense receipts | Any member | Client-side | #19 |
+| Shared media | Any member | Client-side | #38 |
+| Settlement manifests | Server (post-settlement) | Server-side | #28 |
+| CAR bundles | Server (cron / admin trigger) | Server-side | #33, #35 |
+
+---
+
+## UCAN Delegation Model (PR #39)
+
+This is **how access is controlled** per group space:
+
+```
+GROUP SPACE: splitfare-group-abc123
+│
+├── Creator (ADMIN)
+│   └── Full delegation (read + write + manage)
+│       Granted: on group creation
+│
+├── Admin members
+│   └── Write delegation (read + upload + bundle)
+│       Granted: on promotion to admin
+│
+├── Regular members
+│   └── Limited delegation (read + upload receipts/media)
+│       Granted: on join
+│       Revoked: on leave or removal
+│
+└── Server agent
+    └── Write delegation (manifests + bundles)
+        Granted: on group creation
+```
+
+### Lifecycle:
+
+```
+Member joins group (PR #13)
+    → Read + receipt upload delegation granted to member's DID
+    → Member can now:
+        ✓ Read all content in group space
+        ✓ Upload receipts for their expenses
+        ✓ Upload shared media
+
+Member leaves / removed (PR #13)
+    → Delegation revoked
+    → Member can no longer access group space
+
+Member promoted to admin
+    → Delegation upgraded to include bundle upload + manage
+```
+
+---
+
+## The Two Storacha Agents (PR #5)
+
+```
+┌──────────────────────────┐     ┌──────────────────────────┐
+│   SERVER-SIDE AGENT      │     │   CLIENT-SIDE AGENT      │
+│                          │     │                          │
+│   Runs on: API routes    │     │   Runs on: Browser       │
+│                          │     │                          │
+│   Writes to:             │     │   Writes to:             │
+│   • Platform space       │     │   • Group spaces         │
+│     (avatars)            │     │     (via UCAN delegation)│
+│   • Group spaces         │     │                          │
+│     (manifests, bundles) │     │   Uploads:               │
+│                          │     │   • Receipts             │
+│   Has: Master keys       │     │   • Shared media         │
+│                          │     │   • Group avatars        │
+│                          │     │                          │
+│                          │     │   Has: Delegated access  │
+│                          │     │   per user per group     │
+└──────────────────────────┘     └──────────────────────────┘
+```
+
+**Why two agents?**
+
+- **Receipts and media** upload directly from the browser (client-side agent) for speed — no round-trip through the API server
+- **Manifests and CAR bundles** are generated server-side (they require aggregating database records), so the server agent uploads them
+- **User avatars** go through the server because they're processed (cropped/compressed) and stored in the platform space
+
+---
+
+## Concrete Example: Group "Trip to Tokyo"
+
+```
+Space: splitfare-group-grp_7xK2mN
+Space DID: did:key:z6Mkr...abc
+
+Contents:
+│
+├── group-avatar.jpg
+│   CID: bafy...aaa1
+│   Uploaded by: Alice (creator)
+│
+├── receipts/
+│   ├── sushi-dinner-receipt.jpg
+│   │   CID: bafy...bbb1
+│   │   Linked to: Expense #1 (expense.receiptCid)
+│   │   Uploaded by: Alice (client-side agent)
+│   │
+│   ├── hotel-bill.pdf
+│   │   CID: bafy...bbb2
+│   │   Linked to: Expense #2
+│   │   Uploaded by: Bob (client-side agent)
+│   │
+│   └── train-pass.jpg
+│       CID: bafy...bbb3
+│       Linked to: Expense #3
+│       Uploaded by: Charlie (client-side agent)
+│
+├── manifests/
+│   ├── settlement-alice-bob.json
+│   │   CID: bafy...ccc1
+│   │   Linked to: Settlement #1 (settlement.manifestCid)
+│   │   Uploaded by: Server agent
+│   │   Contains refs to: bafy...bbb1, bafy...bbb2
+│   │
+│   └── settlement-charlie-alice.json
+│       CID: bafy...ccc2
+│       Linked to: Settlement #2
+│       Uploaded by: Server agent
+│
+├── media/
+│   ├── group-selfie.jpg
+│   │   CID: bafy...ddd1
+│   │   Uploaded by: Bob (client-side agent)
+│   │
+│   └── temple-photo.jpg
+│       CID: bafy...ddd2
+│       Uploaded by: Charlie (client-side agent)
+│
+└── bundles/
+    ├── bundle-2024-01-15.car
+    │   Root CID: bafy...eee1  ← ANCHORED ON-CHAIN
+    │   Contains DAG referencing ALL above CIDs
+    │   Uploaded by: Server agent (cron job)
+    │
+    └── bundle-2024-01-16.car
+        Root CID: bafy...eee2  ← ANCHORED ON-CHAIN
+        Contains DAG referencing all CIDs incl. new ones
+        Uploaded by: Server agent (cron job)
+```
+
+---
+
+## How CIDs Flow Through the System
+
+```
+Receipt photo taken
+    ↓
+Client-side agent uploads to group space
+    ↓
+CID returned: bafy...bbb1
+    ↓
+Stored in DB: expense.receiptCid = "bafy...bbb1"
+    ↓
+Settlement happens, manifest generated
+    ↓
+Manifest JSON references bafy...bbb1
+    ↓
+Server agent uploads manifest to group space
+    ↓
+CID returned: bafy...ccc1
+    ↓
+Stored in DB: settlement.manifestCid = "bafy...ccc1"
+    ↓
+Cron job runs (every 24h)
+    ↓
+Fetches ALL CIDs: bafy...bbb1, bafy...ccc1, etc.
+    ↓
+Builds IPLD DAG referencing them (no re-upload, just references)
+    ↓
+Encodes as CAR file
+    ↓
+Server agent uploads CAR to group space
+    ↓
+Root CID returned: bafy...eee1
+    ↓
+Root CID anchored on-chain via SplitFareCIDRegistry
+    ↓
+Anyone can: root CID → fetch CAR → traverse DAG → verify every receipt
+```
+
+---
+
+## Summary
+
+| Space | Count | Owner | Contains |
+|---|---|---|---|
+| **Platform space** | 1 | Server agent | User avatars |
+| **Group spaces** | 1 per group | Server agent (creator delegated) | Receipts, manifests, media, bundles, group avatar |
+
+**Every piece of user content lives in a Storacha space.** The group space is the primary organizational unit — it's where the data ownership story lives, because a group's entire financial history is in one addressable, exportable, verifiable space.

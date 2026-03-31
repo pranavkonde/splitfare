@@ -38,7 +38,13 @@ export default function JoinGroupPage({ params }: { params: { code: string } }) 
         const result = await res.json();
 
         if (!res.ok) {
-          setError(result.error || "Failed to load group details");
+          const msg =
+            typeof result.error === "object" && result.error?.message
+              ? result.error.message
+              : typeof result.error === "string"
+                ? result.error
+                : "Failed to load group details";
+          setError(msg);
         } else {
           setGroup(result.data);
         }
@@ -78,16 +84,23 @@ export default function JoinGroupPage({ params }: { params: { code: string } }) 
         });
         router.push(`/dashboard/groups/${result.data.groupId}`);
       } else {
-        if (result.error === "Already a member") {
+        const err = result.error;
+        const errMessage = typeof err === "object" && err?.message ? err.message : typeof err === "string" ? err : "";
+        const errCode = typeof err === "object" ? err.code : undefined;
+        const groupIdFromErr = typeof err === "object" && err?.details?.groupId ? err.details.groupId : undefined;
+
+        if (errMessage === "Already a member" || errCode === "ALREADY_MEMBER") {
           notify({
             title: "Already a member",
             description: "You are already in this group.",
           });
-          router.push(`/dashboard/groups/${result.groupId}`);
+          if (groupIdFromErr) {
+            router.push(`/dashboard/groups/${groupIdFromErr}`);
+          }
         } else {
           notify({
             title: "Error joining group",
-            description: result.error || "Please try again later.",
+            description: errMessage || "Please try again later.",
             variant: "error",
           });
         }

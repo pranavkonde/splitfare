@@ -1,4 +1,5 @@
-import { withMiddleware, createResponse } from '@/lib/api-utils';
+import { withMiddleware, createResponse, createErrorResponse } from '@/lib/api-utils';
+import { NotFoundError } from '@/lib/errors';
 import { supabaseAdmin } from '@/supabase/admin';
 
 const getGroupByInviteCode = async (req: Request, { params }: { params: { code: string } }) => {
@@ -20,7 +21,7 @@ const getGroupByInviteCode = async (req: Request, { params }: { params: { code: 
 
     if (error || !group) {
       console.error('Error fetching group by invite code:', error);
-      return createResponse({ error: 'Invalid invite code' }, 404);
+      return createErrorResponse(new NotFoundError('Invalid invite code'));
     }
 
     const formattedGroup = {
@@ -31,7 +32,7 @@ const getGroupByInviteCode = async (req: Request, { params }: { params: { code: 
     return createResponse(formattedGroup);
   } catch (error) {
     console.error('Error in GET /api/groups/invite/[code]:', error);
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 

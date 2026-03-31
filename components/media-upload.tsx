@@ -78,9 +78,13 @@ export function MediaUpload({ groupId, onSuccess }: MediaUploadProps) {
     const uploadPromises = files.map(async (fileData, index) => {
       try {
         const token = await getAccessToken();
-        const cid = await uploadReceipt(fileData.file, (p) => {
-          setFiles(prev => prev.map((f, i) => i === index ? { ...f, progress: p } : f));
-        });
+        const cid = await uploadReceipt(
+          fileData.file,
+          (p) => {
+            setFiles(prev => prev.map((f, i) => i === index ? { ...f, progress: p } : f));
+          },
+          getAccessToken
+        );
 
         const res = await fetch(`/api/groups/${groupId}/media`, {
           method: 'POST',

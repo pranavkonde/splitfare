@@ -1,4 +1,5 @@
-import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { withMiddleware, createResponse, createErrorResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { ForbiddenError, NotFoundError, AppError } from '@/lib/errors';
 import { supabaseAdmin } from '@/supabase/admin';
 import { toDbUserId } from '@/lib/privy-utils';
 import { UpdateExpenseApiSchema } from '@/lib/validations/expense';
@@ -16,7 +17,7 @@ const getExpenseDetail = async (req: AuthenticatedRequest, { params }: { params:
       .single();
 
     if (memberError || !membership) {
-      return createResponse({ error: 'Access denied' }, 403);
+      return createErrorResponse(new ForbiddenError('Access denied'));
     }
 
     const detailSelect = `
@@ -54,13 +55,13 @@ const getExpenseDetail = async (req: AuthenticatedRequest, { params }: { params:
     }
 
     if (fetchError || !expense) {
-      return createResponse({ error: 'Expense not found' }, 404);
+      return createErrorResponse(new NotFoundError('Expense not found'));
     }
 
     return createResponse(expense);
   } catch (error) {
     console.error('Error in GET /api/groups/[id]/expenses/[expenseId]:', error);
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 
@@ -79,7 +80,7 @@ const updateExpense = async (req: AuthenticatedRequest & { validatedBody: any },
       .single();
 
     if (fetchError || !expense) {
-      return createResponse({ error: 'Expense not found' }, 404);
+      return createErrorResponse(new NotFoundError('Expense not found'));
     }
 
     const { data: membership, error: memberError } = await supabaseAdmin
@@ -90,7 +91,7 @@ const updateExpense = async (req: AuthenticatedRequest & { validatedBody: any },
       .single();
 
     if (memberError || !membership || (expense.created_by !== userId && membership.role !== 'admin')) {
-      return createResponse({ error: 'Unauthorized to edit this expense' }, 403);
+      return createErrorResponse(new ForbiddenError('Unauthorized to edit this expense'));
     }
 
     const { data: updatedExpense, error: updateError } = await supabaseAdmin
@@ -108,7 +109,7 @@ const updateExpense = async (req: AuthenticatedRequest & { validatedBody: any },
       .single();
 
     if (updateError) {
-      return createResponse({ error: 'Failed to update expense' }, 400);
+      return createErrorResponse(new AppError('Failed to update expense', 400));
     }
 
     if (body.splits) {
@@ -127,7 +128,7 @@ const updateExpense = async (req: AuthenticatedRequest & { validatedBody: any },
         .insert(splitsToInsert);
 
       if (splitsError) {
-        return createResponse({ error: 'Failed to update splits' }, 400);
+        return createErrorResponse(new AppError('Failed to update splits', 400));
       }
     }
 
@@ -146,7 +147,7 @@ const updateExpense = async (req: AuthenticatedRequest & { validatedBody: any },
     return createResponse(updatedExpense);
   } catch (error) {
     console.error('Error in PATCH /api/groups/[id]/expenses/[expenseId]:', error);
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 
@@ -164,7 +165,7 @@ const deleteExpense = async (req: AuthenticatedRequest, { params }: { params: { 
       .single();
 
     if (fetchError || !expense) {
-      return createResponse({ error: 'Expense not found' }, 404);
+      return createErrorResponse(new NotFoundError('Expense not found'));
     }
 
     const { data: membership, error: memberError } = await supabaseAdmin
@@ -175,7 +176,7 @@ const deleteExpense = async (req: AuthenticatedRequest, { params }: { params: { 
       .single();
 
     if (memberError || !membership || (expense.created_by !== userId && membership.role !== 'admin')) {
-      return createResponse({ error: 'Unauthorized to delete this expense' }, 403);
+      return createErrorResponse(new ForbiddenError('Unauthorized to delete this expense'));
     }
 
     const { error: deleteError } = await supabaseAdmin
@@ -187,13 +188,13 @@ const deleteExpense = async (req: AuthenticatedRequest, { params }: { params: { 
       .eq('id', expenseId);
 
     if (deleteError) {
-      return createResponse({ error: 'Failed to delete expense' }, 400);
+      return createErrorResponse(new AppError('Failed to delete expense', 400));
     }
 
     return createResponse({ message: 'Expense deleted successfully' });
   } catch (error) {
     console.error('Error in DELETE /api/groups/[id]/expenses/[expenseId]:', error);
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 
