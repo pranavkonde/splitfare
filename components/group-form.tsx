@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
-import { getBrowserStorachaService } from "@/lib/storacha";
+import { uploadReceipt } from "@/services/receipt-upload";
+import { resolveMediaUrl } from "@/lib/media-url";
 import { cn } from "@/lib/cn";
 import { z } from "zod";
 import { usePrivy } from "@privy-io/react-auth";
@@ -84,9 +85,8 @@ export function GroupForm() {
       let avatarUrl: string | null = null;
 
       if (avatarFile) {
-        const storacha = await getBrowserStorachaService();
-        const cid = await storacha.uploadFile(avatarFile);
-        avatarUrl = storacha.gatewayUrl(cid);
+        const cid = await uploadReceipt(avatarFile, () => {}, getAccessToken);
+        avatarUrl = resolveMediaUrl(cid);
       }
 
       const payload: CreateGroup = {
