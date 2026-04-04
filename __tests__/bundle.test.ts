@@ -11,6 +11,7 @@ vi.mock('../supabase/admin', () => ({
     from: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
+    is: vi.fn().mockReturnThis(),
     single: vi.fn(),
   },
 }));
@@ -40,6 +41,7 @@ describe('GroupBundleService', () => {
       return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         single: vi.fn().mockImplementation(() => {
           if (table === 'groups') return { data: { name: 'Test Group' }, error: null };
           return { data: null, error: null };
@@ -62,7 +64,7 @@ describe('GroupBundleService', () => {
               }],
               error: null
             });
-          } else if (table === 'settlements') {
+          } else if (table === 'settlements' || table === 'shared_media') {
             resolve({ data: [], error: null });
           }
         }
@@ -85,6 +87,7 @@ describe('GroupBundleService', () => {
       return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         single: vi.fn().mockImplementation(() => {
           if (table === 'groups') return { data: { name: 'Empty Group' }, error: null };
           return { data: null, error: null };
@@ -94,7 +97,7 @@ describe('GroupBundleService', () => {
             resolve({ data: [], error: null });
           } else if (table === 'expenses') {
             resolve({ data: [], error: null });
-          } else if (table === 'settlements') {
+          } else if (table === 'settlements' || table === 'shared_media') {
             resolve({ data: [], error: null });
           }
         }
@@ -131,11 +134,13 @@ describe('GroupBundleService', () => {
     const mockSupabase = (table: string) => ({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
       single: vi.fn().mockReturnValue(table === 'groups' ? mockData.group : { data: null }),
       then: (resolve: any) => {
         if (table === 'group_members') resolve(mockData.members);
         if (table === 'expenses') resolve(mockData.expenses);
         if (table === 'settlements') resolve(mockData.settlements);
+        if (table === 'shared_media') resolve({ data: [], error: null });
       }
     });
 

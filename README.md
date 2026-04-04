@@ -214,9 +214,9 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 NEXT_PUBLIC_PRIVY_APP_ID=your-privy-app-id
 PRIVY_APP_SECRET=your-privy-app-secret
 
-# Storacha
-STORACHA_PRINCIPAL=your-storacha-principal
-STORACHA_PROOF=your-storacha-proof
+# Storacha (use both; STORACHA_PRINCIPAL is an alias for STORACHA_KEY)
+STORACHA_KEY=your-storacha-principal-secret
+STORACHA_PROOF=your-storacha-space-proof-base64
 
 # ENS
 ENS_RESOLVER_ADDRESS=0x...

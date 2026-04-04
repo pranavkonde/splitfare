@@ -1,4 +1,3 @@
-import * as StorachaClient from "@storacha/client";
 import { formatCidUrl, normalizeCid } from "./cid-utils";
 
 type BlobLike = Blob;
@@ -104,14 +103,3 @@ export class StorachaService {
   }
 }
 
-let browserServicePromise: Promise<StorachaService> | undefined;
-
-export async function getBrowserStorachaService(
-  options?: StorachaServiceOptions
-): Promise<StorachaService> {
-  if (!browserServicePromise) {
-    const client = (await StorachaClient.create()) as unknown as StorachaClientType;
-    browserServicePromise = Promise.resolve(new StorachaService(client, options));
-  }
-  return browserServicePromise;
-}
