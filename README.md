@@ -18,7 +18,7 @@ SplitFare is a Web3-native Progressive Web App (PWA) for splitting expenses with
 - No tamper-proof record linking payments back to expenses
 - USDC scattered across chains makes settling frustrating
 
-**SplitFare solves all of this** the crypto is invisible, but every record is provable.
+**SplitFare solves all of this:** the crypto is invisible, but every record is provable.
 
 ---
 
@@ -262,12 +262,10 @@ Open [http://localhost:3000](http://localhost:3000).
 ```
 splitfare/
 ├── app/                    # Next.js App Router pages and API routes
-│   ├── (dashboard)/        # Authenticated app shell
-│   ├── (marketing)/        # Landing page
+│   ├── dashboard/          # User dashboard
 │   ├── api/                # API route handlers
-│   ├── groups/             # Group pages (dashboard, expenses, settle)
+│   ├── groups/             # Group pages (expenses, settle, media)
 │   ├── join/               # Invite link handler
-│   ├── login/              # Auth page
 │   └── onboarding/         # New user onboarding flow
 ├── components/             # Reusable React components
 │   ├── ui/                 # Base design system components
@@ -278,8 +276,6 @@ splitfare/
 │   ├── src/                # Solidity source files
 │   ├── test/               # Foundry tests
 │   └── script/             # Deploy scripts
-├── docs/                   # Extended documentation
-├── e2e/                    # Playwright end-to-end tests
 ├── hooks/                  # React custom hooks
 ├── lib/                    # Utilities and service clients
 │   ├── storacha.ts         # Storacha client
@@ -335,15 +331,15 @@ forge script script/Deploy.s.sol --rpc-url base_sepolia --broadcast
 
 SplitFare uses Storacha across five core features:
 
-1. **Receipt Storage**- Receipt photos are uploaded to Storacha on expense creation. The returned CID is stored with the expense record so any group member can verify the original, unaltered file.
+1. **Receipt Storage** - Receipt photos are uploaded to Storacha on expense creation. The returned CID is stored with the expense record so any group member can verify the original, unaltered file.
 
-2. **Settlement Manifests**- After every on-chain USDC settlement, a structured JSON manifest (payer, payee, amount, txHash, linked expense and receipt CIDs) is uploaded to Storacha, creating an end-to-end verifiable chain.
+2. **Settlement Manifests** - After every on-chain USDC settlement, a structured JSON manifest (payer, payee, amount, txHash, linked expense and receipt CIDs) is uploaded to Storacha, creating an end-to-end verifiable chain.
 
-3. **Group Bundles & On-Chain Anchoring**- Periodically, all group data is bundled into a CAR file, uploaded to Storacha, and the root CID is anchored on-chain. One transaction proves hundreds of records.
+3. **Group Bundles & On-Chain Anchoring** - Periodically, all group data is bundled into a CAR file, uploaded to Storacha, and the root CID is anchored on-chain. One transaction proves hundreds of records.
 
-4. **Data Export**- Users can export their complete group history as a Storacha-hosted CAR archive they own independently.
+4. **Data Export** - Users can export their complete group history as a Storacha-hosted CAR archive they own independently.
 
-5. **Shared Media Spaces**- Groups maintain shared Storacha spaces for trip photos and documents, with UCAN delegation for access control.
+5. **Shared Media Spaces** - Groups maintain shared Storacha spaces for trip photos and documents, with UCAN delegation for access control.
 
 ---
 
@@ -355,12 +351,6 @@ SplitFare uses Storacha across five core features:
 # Unit and integration tests
 npm test
 
-# Watch mode
-npm run test:watch
-
-# E2E tests (requires running dev server)
-npm run test:e2e
-
 # Smart contract tests
 cd contracts && forge test
 ```
@@ -370,10 +360,7 @@ cd contracts && forge test
 ```bash
 npm run lint        # ESLint
 npm run typecheck   # TypeScript
-npm run format      # Prettier
 ```
-
-Commits must follow [Conventional Commits](https://www.conventionalcommits.org), enforced via commitlint and Husky.
 
 
 ## Contributing
