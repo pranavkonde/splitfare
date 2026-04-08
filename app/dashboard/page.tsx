@@ -14,9 +14,16 @@ import {
   Utensils,
   Car,
   Zap,
-  ChevronDown,
   TrendingUp,
 } from "lucide-react";
+import { startOfMonth, startOfWeek, startOfYear } from "date-fns";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { resolvePrivyAccessToken, SIGN_IN_REQUIRED } from "@/lib/privy-token";
 import {
   fetchExpensesAcrossGroups,
@@ -36,7 +43,25 @@ type Expense = {
   category: string;
   paidBy: string;
   createdAt: string;
+  createdAtIso: string;
 };
+
+type DashboardPeriod = "week" | "month" | "year" | "all";
+
+const DASHBOARD_PERIOD_LABEL: Record<DashboardPeriod, string> = {
+  week: "This week",
+  month: "This month",
+  year: "This year",
+  all: "All time",
+};
+
+function startOfDashboardPeriod(period: DashboardPeriod): Date | null {
+  if (period === "all") return null;
+  const now = new Date();
+  if (period === "week") return startOfWeek(now, { weekStartsOn: 1 });
+  if (period === "month") return startOfMonth(now);
+  return startOfYear(now);
+}
 
 type UiGroup = {
   id: string;
@@ -152,6 +177,7 @@ export default function DashboardPage() {
   const reduceMotion = useReducedMotion();
   const { ready, authenticated, login, getAccessToken } = usePrivy();
   const [tab, setTab] = useState<"overview" | "balances">("overview");
+  const [period, setPeriod] = useState<DashboardPeriod>("month");
   const [pulseFab, setPulseFab] = useState(true);
 
   useEffect(() => {
@@ -229,6 +255,7 @@ export default function DashboardPage() {
         category: toTitleCase(row.category),
         paidBy: row.paidByName || "Unknown",
         createdAt: toRelativeDateLabel(row.created_at),
+        createdAtIso: row.created_at,
       }));
 
       return { groups: uiGroups, expenses: uiExpenses };
@@ -242,6 +269,11 @@ export default function DashboardPage() {
 
   const liveGroups = useMemo(() => data?.groups ?? [], [data]);
   const liveExpenses = useMemo(() => data?.expenses ?? [], [data]);
+  const filteredExpenses = useMemo(() => {
+    const start = startOfDashboardPeriod(period);
+    if (!start) return liveExpenses;
+    return liveExpenses.filter((e) => new Date(e.createdAtIso).getTime() >= start.getTime());
+  }, [liveExpenses, period]);
 
   const total = useMemo(
     () => liveGroups.reduce((sum, group) => sum + group.balance, 0),
@@ -334,13 +366,24 @@ export default function DashboardPage() {
               </span>
             </h1>
           </div>
-          <button
-            type="button"
-            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-slate-200/90 bg-white/90 px-4 text-[13px] font-medium text-slate-700 transition hover:border-slate-300 hover:bg-white dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:border-slate-600"
+          <Select
+            defaultValue="month"
+            containerClassName="w-auto shrink-0"
+            onValueChange={(value) => setPeriod(value as DashboardPeriod)}
           >
-            This month
-            <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-          </button>
+            <SelectTrigger
+              className="h-10 w-auto min-w-[8.5rem] shrink-0 gap-1.5 rounded-full border border-slate-200/90 bg-white/90 px-4 text-[13px] font-medium text-slate-700 shadow-none transition hover:border-slate-300 hover:bg-white dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:border-slate-600 focus:ring-offset-0 dark:focus:ring-offset-slate-950 [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:opacity-60"
+            >
+              <SelectValue value={DASHBOARD_PERIOD_LABEL[period]} />
+            </SelectTrigger>
+            <SelectContent className="z-[100] min-w-[10rem] border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+              {(Object.keys(DASHBOARD_PERIOD_LABEL) as DashboardPeriod[]).map((key) => (
+                <SelectItem key={key} value={key}>
+                  {DASHBOARD_PERIOD_LABEL[key]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </motion.header>
 
         <motion.section
@@ -365,7 +408,7 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2 text-[13px] font-medium text-white">
                 <TrendingUp className="h-4 w-4 opacity-90" />
-                {owed} {owed === 1 ? "group" : "groups"} owe you
+                {owed} {owed === 1 ? "group owes you" : "groups owe you"}
               </div>
             </div>
           </div>
@@ -405,7 +448,7 @@ export default function DashboardPage() {
               transition={{ duration: 0.2 }}
               className="space-y-3"
             >
-              {liveExpenses.map((expense, index) => {
+              {filteredExpenses.map((expense, index) => {
                 const meta =
                   CATEGORY_STYLES[expense.category] ?? {
                     ...defaultCat,
@@ -533,6 +576,17 @@ export default function DashboardPage() {
             >
               Go to groups
             </Link>
+          </section>
+        )}
+
+        {!!liveExpenses.length && !filteredExpenses.length && tab === "overview" && (
+          <section className="mt-8 rounded-[1.25rem] border border-dashed border-slate-300/90 bg-white/80 px-6 py-12 text-center dark:border-slate-700 dark:bg-slate-900/50">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              No expenses in {DASHBOARD_PERIOD_LABEL[period].toLowerCase()}
+            </h2>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              Try a wider range above or add a new expense in your groups.
+            </p>
           </section>
         )}
 
