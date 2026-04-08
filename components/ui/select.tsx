@@ -11,7 +11,17 @@ const SelectContext = React.createContext<{
   setIsOpen: (open: boolean) => void
 } | null>(null)
 
-const Select = ({ children, onValueChange, defaultValue }: any) => {
+const Select = ({
+  children,
+  onValueChange,
+  defaultValue,
+  containerClassName,
+}: {
+  children: React.ReactNode
+  onValueChange?: (value: string) => void
+  defaultValue?: string
+  containerClassName?: string
+}) => {
   const [value, setValue] = React.useState(defaultValue)
   const [isOpen, setIsOpen] = React.useState(false)
 
@@ -40,7 +50,7 @@ const Select = ({ children, onValueChange, defaultValue }: any) => {
 
   return (
     <SelectContext.Provider value={{ value, onValueChange: handleValueChange, isOpen, setIsOpen }}>
-      <div ref={containerRef} className="relative w-full">
+      <div ref={containerRef} className={cn("relative w-full", containerClassName)}>
         {children}
       </div>
     </SelectContext.Provider>
@@ -109,14 +119,19 @@ const SelectItem = React.forwardRef<
       ref={ref}
       onClick={() => context.onValueChange?.(value)}
       className={cn(
-        "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-        isSelected && "bg-accent text-accent-foreground",
+        "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        !isSelected &&
+          "hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100",
+        isSelected &&
+          "bg-violet-100 text-violet-950 hover:bg-violet-200 dark:bg-violet-500/20 dark:text-violet-50 dark:hover:bg-violet-500/30",
         className
       )}
       {...props}
     >
       <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-        {isSelected && <Check className="h-4 w-4" />}
+        {isSelected && (
+          <Check className="h-4 w-4 text-violet-600 dark:text-violet-300" strokeWidth={2.5} />
+        )}
       </span>
       {children}
     </div>

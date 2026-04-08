@@ -4,7 +4,13 @@ import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from './ui/button';
 import { Modal } from './ui/modal';
-import { Select } from './ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 import { uploadReceipt, UploadProgress } from '@/services/receipt-upload';
 import { Plus, X, FileText, Image as ImageIcon, Loader2, Link as LinkIcon } from 'lucide-react';
 import { useToast } from './ui/toast';
@@ -20,6 +26,20 @@ interface FileWithProgress {
   file: File;
   progress: UploadProgress;
   expenseId?: string;
+}
+
+function linkedExpenseLabel(
+  expenseId: string | undefined,
+  expenses: Array<{
+    id: string;
+    description: string;
+    currency: string;
+    total_amount: number | string;
+  }>
+) {
+  if (!expenseId) return "No Expense Linked";
+  const e = expenses.find((x) => x.id === expenseId);
+  return e ? `${e.description} (${e.currency} ${e.total_amount})` : "No Expense Linked";
 }
 
 export function MediaUpload({ groupId, onSuccess }: MediaUploadProps) {
@@ -209,19 +229,25 @@ export function MediaUpload({ groupId, onSuccess }: MediaUploadProps) {
 
                   {!isUploading && (
                     <div className="flex items-center gap-2 mt-1">
-                      <LinkIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                      <LinkIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                       <Select
-                        value={f.expenseId || 'none'}
-                        onValueChange={(val: string) => updateFileExpense(i, val)}
-                        options={[
-                          { label: 'No Expense Linked', value: 'none' },
-                          ...expenses.map((e: any) => ({
-                            label: `${e.description} (${e.currency} ${e.total_amount})`,
-                            value: e.id
-                          }))
-                        ]}
-                        className="text-xs h-8"
-                      />
+                        key={`${i}-${f.expenseId ?? "none"}`}
+                        defaultValue={f.expenseId || "none"}
+                        onValueChange={(val) => updateFileExpense(i, val)}
+                        containerClassName="min-w-0 flex-1"
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue value={linkedExpenseLabel(f.expenseId, expenses)} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No Expense Linked</SelectItem>
+                          {expenses.map((e: { id: string; description: string; currency: string; total_amount: number | string }) => (
+                            <SelectItem key={e.id} value={e.id}>
+                              {`${e.description} (${e.currency} ${e.total_amount})`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   )}
                 </div>
