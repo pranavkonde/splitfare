@@ -29,7 +29,7 @@ export function NotificationList() {
       <div className="flex flex-col items-center justify-center py-12 px-4 text-center text-muted-foreground">
         <BellOff className="h-12 w-12 mb-4 opacity-20" />
         <h3 className="text-lg font-medium">No notifications yet</h3>
-        <p className="text-sm">We'll let you know when something happens!</p>
+        <p className="text-sm">We&apos;ll let you know when something happens!</p>
       </div>
     );
   }

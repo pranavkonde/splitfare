@@ -21,7 +21,7 @@ export const GroupCreatedEmail: React.FC<Readonly<GroupCreatedEmailProps>> = ({
   }}>
     <h1 style={{ color: '#020617', fontSize: '24px', fontWeight: 'bold' }}>Group Created: {groupName}</h1>
     <p style={{ fontSize: '16px', lineHeight: '24px' }}>
-      You've successfully created a new group. Share the invite code below with your friends to start splitting expenses.
+      You&apos;ve successfully created a new group. Share the invite code below with your friends to start splitting expenses.
     </p>
     <div style={{ 
       backgroundColor: '#f1f5f9', 

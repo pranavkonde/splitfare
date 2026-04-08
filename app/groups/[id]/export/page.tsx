@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { 
@@ -44,7 +44,7 @@ export default function ExportPage() {
     },
   });
 
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     try {
       const token = await getAccessToken();
       const res = await fetch(`/api/groups/${id}/export/history`, {
@@ -57,11 +57,11 @@ export default function ExportPage() {
     } catch (err) {
       console.error("Failed to fetch history", err);
     }
-  };
+  }, [getAccessToken, id]);
 
   useEffect(() => {
-    fetchHistory();
-  }, [id]);
+    void fetchHistory();
+  }, [fetchHistory]);
 
   const handleExport = async (format: string) => {
     setExporting(format);
@@ -88,6 +88,7 @@ export default function ExportPage() {
         expA.href = expUrl;
         expA.download = `group_${id}_expenses.csv`;
         expA.click();
+        window.URL.revokeObjectURL(expUrl);
 
         // Download settlements CSV
         const setBlob = new Blob([settlements], { type: 'text/csv' });
@@ -96,6 +97,7 @@ export default function ExportPage() {
         setA.href = setUrl;
         setA.download = `group_${id}_settlements.csv`;
         setA.click();
+        window.URL.revokeObjectURL(setUrl);
       } else {
         // Handle PDF/JSON download
         const blob = await res.blob();
@@ -106,10 +108,11 @@ export default function ExportPage() {
         a.download = `group_${id}_export.${extension}`;
         document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
       }
       
-      fetchHistory();
+      void fetchHistory();
     } catch (error) {
       console.error("Export error", error);
       alert("Export failed. Please try again.");

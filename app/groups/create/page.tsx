@@ -17,7 +17,7 @@ export default function CreateGroupPage() {
       
       <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
         Groups help you track expenses with friends, family, or colleagues. 
-        Once created, you'll get an invite code to share with others.
+        Once created, you&apos;ll get an invite code to share with others.
       </div>
 
       <GroupForm />

@@ -70,23 +70,20 @@ export default function SearchPage() {
     retry: false,
   });
 
-  const groups = data?.groups ?? [];
-  const expenseRows = data?.expenses ?? [];
-
   const matchedGroups = useMemo(() => {
     if (!q) return [];
-    return groups.filter(
+    return (data?.groups ?? []).filter(
       (g) =>
         matchesQuery(g.name, q) ||
         matchesQuery(g.description, q) ||
         matchesQuery(g.category ? toTitleCase(g.category) : null, q) ||
         matchesQuery(g.invite_code, q)
     );
-  }, [q, groups]);
+  }, [q, data?.groups]);
 
   const matchedExpenses = useMemo(() => {
     if (!q) return [];
-    return expenseRows.filter(
+    return (data?.expenses ?? []).filter(
       (e) =>
         matchesQuery(e.description, q) ||
         matchesQuery(e.groupName, q) ||
@@ -94,7 +91,7 @@ export default function SearchPage() {
         matchesQuery(e.categoryDisplay, q) ||
         matchesQuery(e.category, q)
     );
-  }, [q, expenseRows]);
+  }, [q, data?.expenses]);
 
   const hasQuery = q.length > 0;
   const noMatches =

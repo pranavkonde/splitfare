@@ -66,7 +66,7 @@ export function WelcomeScreen() {
           >
             <h1 className="text-3xl font-bold tracking-tight">Welcome to SplitFare</h1>
             <p className="text-muted-foreground">
-              You've successfully installed SplitFare as an app on your home screen.
+              You&apos;ve successfully installed SplitFare as an app on your home screen.
             </p>
           </motion.div>
 

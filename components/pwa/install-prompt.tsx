@@ -136,13 +136,13 @@ export function InstallPrompt() {
                   <div className="flex items-center gap-4">
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold">2</div>
                     <div className="flex-1 text-sm">
-                      Scroll down and tap <Plus className="w-4 h-4 inline mx-1" /> "Add to Home Screen".
+                      Scroll down and tap <Plus className="w-4 h-4 inline mx-1" /> &quot;Add to Home Screen&quot;.
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold">3</div>
                     <div className="flex-1 text-sm">
-                      Tap "Add" in the top right corner.
+                      Tap &quot;Add&quot; in the top right corner.
                     </div>
                   </div>
                 </div>

@@ -198,7 +198,7 @@ export default function GroupDetailsPage() {
     return (
       <div className="mx-auto w-full max-w-6xl px-4 py-12 text-center sm:px-6 space-y-4">
         <h1 className="text-2xl font-bold">Group not found</h1>
-        <p className="text-muted-foreground">The group you're looking for doesn't exist or you don't have access.</p>
+        <p className="text-muted-foreground">The group you&apos;re looking for doesn&apos;t exist or you don&apos;t have access.</p>
         <Button asChild>
           <Link href="/groups">Back to Groups</Link>
         </Button>

@@ -127,7 +127,7 @@ export default function ExpenseDetailPage() {
         </div>
         <h1 className="text-2xl font-black uppercase tracking-tighter">Expense Not Found</h1>
         <p className="text-sm text-muted-foreground font-medium px-10">
-          The expense you are looking for might have been deleted or you don't have access to view it.
+          The expense you are looking for might have been deleted or you don&apos;t have access to view it.
         </p>
         <Button asChild variant="outline" className="rounded-2xl font-black uppercase tracking-tighter mt-4">
           <Link href={`/groups/${groupId}`}>

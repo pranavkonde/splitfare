@@ -112,7 +112,7 @@ export function ReceiptCapture({ onUploadSuccess, initialCid }: ReceiptCapturePr
             <div className="text-center">
               <p className="text-sm font-bold">Snap a photo of your receipt</p>
               <p className="text-xs text-muted-foreground mt-1 px-4">
-                We'll compress it and secure it on IPFS via Storacha.
+                We&apos;ll compress it and secure it on IPFS via Storacha.
               </p>
             </div>
             

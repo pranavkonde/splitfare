@@ -19,7 +19,7 @@ export const WelcomeEmail: React.FC<Readonly<WelcomeEmailProps>> = ({
   }}>
     <h1 style={{ color: '#020617', fontSize: '24px', fontWeight: 'bold' }}>Welcome to SplitFare, {userFirstname}!</h1>
     <p style={{ fontSize: '16px', lineHeight: '24px' }}>
-      We're excited to have you on board. SplitFare makes it easy to split expenses and track balances with your friends.
+      We&apos;re excited to have you on board. SplitFare makes it easy to split expenses and track balances with your friends.
     </p>
     <div style={{ textAlign: 'center', marginTop: '30px' }}>
       <a href="https://splitfare.io/dashboard" style={{
