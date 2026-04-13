@@ -71,7 +71,7 @@ export class VerifierService {
 
       // 3. Fetch CAR from Storacha
       const IPFS_GATEWAY = process.env.IPFS_GATEWAY_HOST || 'storacha.link';
-      const carUrl = `https://${IPFS_GATEWAY}/ipfs/${rootCidStr}`;
+      const carUrl = `https://${rootCidStr}.ipfs.${IPFS_GATEWAY}`;
       const response = await fetch(carUrl);
       if (!response.ok) {
         throw new Error(`Failed to fetch CAR file from Storacha: ${response.statusText}`);
@@ -166,7 +166,7 @@ export class VerifierService {
   private async checkCidExists(cid: string): Promise<boolean> {
     try {
       const gateway = process.env.IPFS_GATEWAY_HOST || 'storacha.link';
-      const response = await fetch(`https://${gateway}/ipfs/${cid}`, { method: 'HEAD' });
+      const response = await fetch(`https://${cid}.ipfs.${gateway}`, { method: 'HEAD' });
       return response.ok;
     } catch {
       return false;

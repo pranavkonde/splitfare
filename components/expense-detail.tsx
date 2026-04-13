@@ -18,6 +18,7 @@ import { SplitBreakdown } from "./split-breakdown";
 import { useState } from "react";
 import { useToast } from "@/components/ui/toast";
 import Link from "next/link";
+import { resolveMediaUrl } from "@/lib/media-url";
 
 const categoryIcons: Record<string, typeof Tag> = {
   other: Tag,
@@ -163,7 +164,7 @@ export function ExpenseDetail({
                   {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
                 </Button>
                 <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full" asChild>
-                  <a href={`https://storacha.link/ipfs/${receipt.cid}`} target="_blank" rel="noopener noreferrer">
+                  <a href={resolveMediaUrl(receipt.cid)} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="h-4 w-4" />
                   </a>
                 </Button>
@@ -171,12 +172,12 @@ export function ExpenseDetail({
             </div>
             
             <Link 
-              href={`https://storacha.link/ipfs/${receipt.cid}`}
+              href={resolveMediaUrl(receipt.cid)}
               target="_blank"
               className="block relative aspect-video rounded-2xl overflow-hidden border bg-background group"
             >
               <img 
-                src={`https://storacha.link/ipfs/${receipt.cid}`} 
+                src={resolveMediaUrl(receipt.cid)} 
                 alt="Receipt thumbnail"
                 className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
               />

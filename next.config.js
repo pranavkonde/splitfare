@@ -49,6 +49,11 @@ const nextConfig = {
         hostname: 'storacha.link',
         pathname: '/ipfs/**',
       },
+      {
+        // Subdomain-style: https://{cid}.ipfs.storacha.link
+        protocol: 'https',
+        hostname: '*.ipfs.storacha.link',
+      },
     ],
   },
 };

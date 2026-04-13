@@ -4,6 +4,8 @@ import { StoreMemory } from "@storacha/client/stores/memory";
 import * as Ed25519 from "@ucanto/principal/ed25519";
 import { StorachaService } from "./storacha";
 
+const STORACHA_SETUP_URL = "https://docs.storacha.network/how-to/upload/#bring-your-own-delegations";
+
 type StorachaServiceOptions = {
   gatewayHost?: string;
 };
@@ -60,11 +62,18 @@ async function createFromEnvCredentials(options?: StorachaServiceOptions): Promi
   const store = new StoreMemory();
   const client = await StorachaClient.create({ store, principal });
   const proof = await parseProof(proofRaw);
-  await client.addSpace(proof);
+  const space = await client.addSpace(proof);
+  
+  // Prefer explicit STORACHA_SPACE_DID; otherwise use the space from the proof
   const spaceDid = process.env.STORACHA_SPACE_DID?.trim();
   if (spaceDid) {
     await client.setCurrentSpace(spaceDid as `did:${string}:${string}`);
+  } else {
+    // Ensure the space from the proof is set as current
+    await client.setCurrentSpace(space.did());
   }
+  
+  console.log(`[Storacha] Server agent initialized. Space: ${client.currentSpace()?.did() ?? "(none)"}`);
   return new StorachaService(client as unknown as ConstructorParameters<typeof StorachaService>[0], options);
 }
 
@@ -86,9 +95,25 @@ export async function createServerStorachaService(
     }
     return envBackedService;
   }
+  
+  // Fallback: no env credentials configured
+  console.warn(
+    `[Storacha] STORACHA_KEY and STORACHA_PROOF are not set. ` +
+    `Using local w3up agent store (requires prior \"storacha login\"). ` +
+    `For production, run: ./scripts/setup-storacha.sh ` +
+    `or see ${STORACHA_SETUP_URL}`
+  );
+  
   if (!defaultService) {
     defaultService = (async () => {
       const client = await StorachaClient.create();
+      const currentSpace = client.currentSpace();
+      if (!currentSpace) {
+        console.warn(
+          `[Storacha] No current space found in local agent store. ` +
+          `Uploads will fail until you run: storacha login && storacha space create <name>`
+        );
+      }
       return new StorachaService(client as unknown as ConstructorParameters<typeof StorachaService>[0], options);
     })();
   }

@@ -56,7 +56,7 @@ export const GET = withAuth(async (req: AuthenticatedRequest, { params }: { para
         case 'car': {
           const rootCid = await exporter.exportToCar(groupId);
           await exporter.updateExportStatus(exportId, 'completed', { rootCid });
-          return createResponse({ rootCid, url: `https://w3s.link/ipfs/${rootCid}` });
+          return createResponse({ rootCid, url: `https://${rootCid}.ipfs.storacha.link` });
         }
 
         case 'pdf': {

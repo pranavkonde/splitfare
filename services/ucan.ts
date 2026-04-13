@@ -11,11 +11,26 @@ export class UCANService {
   constructor(private storacha: StorachaService) {}
 
   /**
-   * Defines standard abilities for different roles
+   * Standard Storacha abilities.
+   * See: https://docs.storacha.network/concepts/architecture-options/#delegated
    */
   static ABILITIES = {
-    MEMBER: ["space/blob/add", "space/blob/list"],
-    ADMIN: ["space/blob/add", "space/blob/list", "space/car/add", "space/delegation/add"],
+    MEMBER: [
+      "space/blob/add",
+      "space/index/add",
+      "filecoin/offer",
+      "upload/add",
+      "space/blob/list",
+      "upload/list",
+    ],
+    ADMIN: [
+      "space/blob/add",
+      "space/index/add",
+      "filecoin/offer",
+      "upload/add",
+      "space/blob/list",
+      "upload/list",
+    ],
     OWNER: ["*"], // Full access
   };
 
